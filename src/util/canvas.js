@@ -12,11 +12,17 @@ function instance(w, h) {
     if (!Canvas.prototype) return null;
     canvas = new Canvas(w, h);
   }
-  return lineDash(canvas);
+
+  // TODO:
+  // This is a hack for now to allow initialization of
+  // webgl context on canvas. should move this to
+  // webgl utils probably
+  return canvas;
+  // return lineDash(canvas);
 }
 
 function resize(canvas, w, h, p, retina) {
-  var g = this._ctx = canvas.getContext('2d'), 
+  var g = this._ctx = canvas.getContext('2d'),
       s = 1;
 
   canvas.width = w + p.left + p.right;
@@ -65,7 +71,7 @@ function lineDash(canvas) {
 
   var NOOP = function() {},
       NODASH = [];
-  
+
   if (g.setLineDash) {
     g.vgLineDash = function(dash) { this.setLineDash(dash || NODASH); };
     g.vgLineDashOffset = function(off) { this.lineDashOffset = off; };
