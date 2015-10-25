@@ -1,6 +1,24 @@
 
 module.exports = {
-  initWebGL: function(canvas) {
+
+  canvasInstance: function(w, h) {
+    w = w || 1;
+    h = h || 1;
+    var canvas;
+
+    if (typeof document !== 'undefined' && document.createElement) {
+      canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+    } else {
+      var Canvas = require('canvas');
+      if (!Canvas.prototype) return null;
+      canvas = new Canvas(w, h);
+    }
+    return canvas;
+  },
+
+  init: function(canvas) {
     if(!canvas) {
       return null;
     }
@@ -20,5 +38,18 @@ module.exports = {
     }
 
     return gl;
+  },
+
+  resize: function(canvas, w, h, p) {
+    canvas.width = w + p.left + p.right;
+    canvas.height = h + p.top + p.bottom;
+  },
+
+  translationMatrix: function(tx, ty) {
+    return [
+      1.0, 0.0, 0.0,
+      0.0, 1.0, 0.0,
+      tx, ty, 1.0
+    ];
   }
 };

@@ -17,8 +17,8 @@ function instance(w, h) {
   // This is a hack for now to allow initialization of
   // webgl context on canvas. should move this to
   // webgl utils probably
-  return canvas;
-  // return lineDash(canvas);
+  // return canvas;
+  return lineDash(canvas);
 }
 
 function resize(canvas, w, h, p, retina) {

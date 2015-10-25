@@ -1,4 +1,5 @@
 var util = require('./util'),
+    WebGL = require('../../../util/webgl');
     EMPTY = [];
 
 function draw(g, scene, bounds) {
@@ -34,14 +35,13 @@ function draw(g, scene, bounds) {
     // }
 
     // setup graphics context
-    // g.save();
-    // g.translate(gx, gy);
+    this._transformStack.push(WebGL.translationMatrix(gx, gy));
     // if (group.clip) {
     //   g.beginPath();
     //   g.rect(0, 0, w, h);
     //   g.clip();
     // }
-    // if (bounds) bounds.translate(-gx, -gy);
+    if (bounds) bounds.translate(-gx, -gy);
 
     // draw group contents
     for (j=0, m=axes.length; j<m; ++j) {
@@ -62,8 +62,8 @@ function draw(g, scene, bounds) {
     }
 
     // restore graphics context
-    // if (bounds) bounds.translate(gx, gy);
-    // g.restore();
+    if (bounds) bounds.translate(gx, gy);
+    this._transformStack.pop();
   }
 }
 

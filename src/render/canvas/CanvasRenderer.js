@@ -91,7 +91,7 @@ prototype.render = function(scene, items) {
 
   // render
   this.draw(g, scene, b);
-  
+
   // takedown
   g.restore();
   this._scene = null; // clear scene cache
@@ -109,7 +109,7 @@ prototype.clear = function(x, y, w, h) {
   g.clearRect(x, y, w, h);
   if (this._bgcolor != null) {
     g.fillStyle = this._bgcolor;
-    g.fillRect(x, y, w, h); 
+    g.fillRect(x, y, w, h);
   }
 };
 

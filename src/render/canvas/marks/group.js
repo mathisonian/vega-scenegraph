@@ -62,7 +62,7 @@ function draw(g, scene, bounds) {
     // restore graphics context
     if (bounds) bounds.translate(gx, gy);
     g.restore();
-  }    
+  }
 }
 
 function pick(g, scene, x, y, gx, gy) {

@@ -30,25 +30,20 @@ function draw(gl, scene, bounds) {
     opac = o.opacity == null ? 1 : o.opacity;
     if (opac === 0) continue;
 
-    x = o.x || 0;
-    y = o.y || 0;
-    w = o.width || 0;
-    h = o.height || 0;
+    x1 = o.x || 0;
+    y1 = o.y || 0;
+    x2 = o.x2 != null ? o.x2 : x1;
+    y2 = o.y2 != null ? o.y2 : y1;
 
     var c = color(o.fill);
     shader.uniforms.color = [c.red() / 255, c.green() / 255, c.blue() / 255, opac];
 
     // create two triangles to form a rectangle
-    var triangleCoordinates = [];
-    triangleCoordinates.push(x, y);
-    triangleCoordinates.push(x+w, y);
-    triangleCoordinates.push(x, y+h);
-    triangleCoordinates.push(x, y+h);
-    triangleCoordinates.push(x+w, y);
-    triangleCoordinates.push(x+w, y+h);
-
-    buffer.update(triangleCoordinates);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    var lineCoordinates = [];
+    lineCoordinates.push(x1, y1);
+    lineCoordinates.push(x2, y2);
+    buffer.update(lineCoordinates);
+    gl.drawArrays(gl.LINES, 0, 2);
   }
 
   buffer.dispose();

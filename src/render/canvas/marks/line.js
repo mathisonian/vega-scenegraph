@@ -2,7 +2,7 @@ var util = require('./util'),
     parse = require('../../../path/parse'),
     render = require('../../../path/render'),
     linePath = require('../../../util/svg').path.line;
-    
+
 function path(g, items) {
   var o = items[0],
       p = o.pathCache || (o.pathCache = parse(linePath(items)));

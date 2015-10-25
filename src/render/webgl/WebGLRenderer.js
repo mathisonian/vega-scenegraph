@@ -1,10 +1,9 @@
 var DOM = require('../../util/dom'),
     Bounds = require('../../util/Bounds'),
     ImageLoader = require('../../util/ImageLoader'),
-    Canvas = require('../../util/canvas'),
     Renderer = require('../Renderer'),
     marks = require('./marks'),
-    WebGLUtils = require('../../util/webgl'),
+    WebGL = require('../../util/webgl'),
     Color = require("color");
 
 function WebGLRenderer(loadConfig) {
@@ -19,18 +18,55 @@ var prototype = (WebGLRenderer.prototype = Object.create(base));
 prototype.constructor = WebGLRenderer;
 
 prototype.initialize = function(el, width, height, padding) {
-  this._canvas = Canvas.instance(width, height);
+  this._canvas = WebGL.canvasInstance(width, height);
   if (el) {
     DOM.clear(el, 0).appendChild(this._canvas);
     this._canvas.setAttribute('class', 'marks');
   }
+
+  this._transformStack = [];
   return base.initialize.call(this, el, width, height, padding);
+};
+
+prototype.projection = function() {
+  // todo - this is working quite right.
+  return [
+    2 / this._width, 0, 0,
+    0, -2 / this._height, 0,
+    -1, 1, 1
+  ];
+};
+
+prototype._matrixMultiply = function(a, b) {
+  // assume they are all 3x3
+  return [
+    a[0] * b[0] + a[1] * b[3] + a[2] * b[6], a[0] * b[1] + a[1] * b[4] + a[2] * b[7], a[0] * b[2] + a[1] * b[5] + a[2] * b[8],
+    a[3] * b[0] + a[4] * b[3] + a[5] * b[6], a[3] * b[1] + a[4] * b[4] + a[5] * b[7], a[3] * b[2] + a[4] * b[5] + a[5] * b[8],
+    a[6] * b[0] + a[7] * b[3] + a[8] * b[6], a[6] * b[1] + a[7] * b[4] + a[8] * b[7], a[6] * b[2] + a[7] * b[5] + a[8] * b[8],
+  ];
+};
+
+prototype.transformationMatrix = function() {
+  var result = [
+    1, 0, 0,
+    0, 1, 0,
+    0, 0, 1
+  ];
+
+  // todo - consolidate the projection matrix here instead of in
+  // the shader
+  //
+  for (var i=this._transformStack.length-1; i>=0; i--) {
+    var transform = this._transformStack[i];
+    result = this._matrixMultiply(transform, result);
+  }
+  return result;
 };
 
 prototype.resize = function(width, height, padding) {
   base.resize.call(this, width, height, padding);
-  // Canvas.resize(this._canvas, this._width, this._height,
-  //   this._padding, WebGLRenderer.RETINA);
+  WebGL.resize(this._canvas, this._width, this._height, this._padding);
+  this._transformStack.push(WebGL.translationMatrix(this._padding.left, this._padding.top));
   return this;
 };
 
@@ -44,7 +80,7 @@ prototype.gl = function() {
   }
 
   var canvas = this.canvas();
-  var gl = WebGLUtils.initWebGL(canvas);
+  var gl = WebGL.init(canvas);
 
   // // Enable depth testing
   gl.enable(gl.DEPTH_TEST);
@@ -93,9 +129,6 @@ function translate(bounds, group) {
 
 prototype.render = function(scene, items) {
 
-  console.log('Rendering scene with WebGLRenderer.');
-  console.log(scene);
-
   var g = this.gl(),
       p = this._padding,
       w = this._width + p.left + p.right,
@@ -120,7 +153,11 @@ prototype.render = function(scene, items) {
 
 prototype.draw = function(ctx, scene, bounds) {
   var mark = marks[scene.marktype];
-  mark.draw.call(this, ctx, scene, bounds);
+  if(mark) {
+    mark.draw.call(this, ctx, scene, bounds);
+  } else {
+    console.error('Can\'t draw marktype: ' + scene.marktype);
+  }
 };
 
 prototype.clear = function(x, y, w, h) {
