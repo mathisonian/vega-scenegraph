@@ -1,6 +1,6 @@
 {
   "name": "vega-scenegraph",
-  "version": "1.0.13",
+  "version": "1.0.16",
   "description": "Vega scenegraph and renderers.",
   "repository": {
     "type": "git",
@@ -53,5 +53,8 @@
   },
   "browserify-shim": {
     "canvas": "global:canvas"
+  },
+  "browser": {
+    "canvas": false
   }
 }
