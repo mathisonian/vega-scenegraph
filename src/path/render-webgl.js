@@ -1,16 +1,20 @@
 var arc = require('./arc');
+var bezier = require('adaptive-bezier-curve');
+var quadratic = require('adaptive-quadratic-curve');
+
 
 module.exports = function(g, path, l, t) {
 
+  var points = [];
 
-
-  console.log('rendering');
   var current, // current instruction
       previous = null,
       x = 0, // current x
       y = 0, // current y
+      tempPoints,
       controlX = 0, // current control point x
       controlY = 0, // current control point y
+      idx,
       tempX,
       tempY,
       tempControlX,
@@ -19,55 +23,61 @@ module.exports = function(g, path, l, t) {
   if (l == null) l = 0;
   if (t == null) t = 0;
 
-  g.beginPath();
-
   for (var i=0, len=path.length; i<len; ++i) {
     current = path[i];
+
+    console.log(current);
 
     switch (current[0]) { // first letter
 
       case 'l': // lineto, relative
+        points.push(x + l, y + t);
         x += current[1];
         y += current[2];
-        g.lineTo(x + l, y + t);
+        points.push(x + l, y + t);
         break;
 
       case 'L': // lineto, absolute
+        points.push(x + l, y + t);
         x = current[1];
         y = current[2];
-        g.lineTo(x + l, y + t);
+        points.push(x + l, y + t);
         break;
 
       case 'h': // horizontal lineto, relative
+        points.push(x + l, y + t);
         x += current[1];
-        g.lineTo(x + l, y + t);
+        points.push(x + l, y + t);
         break;
 
       case 'H': // horizontal lineto, absolute
+        points.push(x + l, y + t);
         x = current[1];
-        g.lineTo(x + l, y + t);
+        points.push(x + l, y + t);
         break;
 
       case 'v': // vertical lineto, relative
+        points.push(x + l, y + t);
         y += current[1];
-        g.lineTo(x + l, y + t);
+        points.push(x + l, y + t);
         break;
 
       case 'V': // verical lineto, absolute
+        points.push(x + l, y + t);
         y = current[1];
-        g.lineTo(x + l, y + t);
+        points.push(x + l, y + t);
         break;
 
       case 'm': // moveTo, relative
         x += current[1];
         y += current[2];
-        g.moveTo(x + l, y + t);
+        // g.moveTo(x + l, y + t);
         break;
 
       case 'M': // moveTo, absolute
         x = current[1];
         y = current[2];
-        g.moveTo(x + l, y + t);
+        // g.moveTo(x + l, y + t);
         break;
 
       case 'c': // bezierCurveTo, relative
@@ -75,31 +85,43 @@ module.exports = function(g, path, l, t) {
         tempY = y + current[6];
         controlX = x + current[3];
         controlY = y + current[4];
-        g.bezierCurveTo(
-          x + current[1] + l, // x1
-          y + current[2] + t, // y1
-          controlX + l, // x2
-          controlY + t, // y2
-          tempX + l,
-          tempY + t
-        );
+
+        tempPoints = bezier(
+            [x + l, y + t],
+            [x + current[1] + l, y + current[2] + t]
+            [controlX + l, controlY + t],
+            [tempX + l, tempY + t]
+          );
+
+        for (idx = 1; idx < tempPoints.length; idx++) {
+          points.push(tempPoints[idx - 1][0], tempPoints[idx - 1][1]);
+          points.push(tempPoints[idx][0], tempPoints[idx][1]);
+        }
+
         x = tempX;
         y = tempY;
         break;
 
       case 'C': // bezierCurveTo, absolute
-        x = current[5];
-        y = current[6];
+
         controlX = current[3];
         controlY = current[4];
-        g.bezierCurveTo(
-          current[1] + l,
-          current[2] + t,
-          controlX + l,
-          controlY + t,
-          x + l,
-          y + t
+
+        tempPoints = bezier(
+          [x + l, y + t],
+          [current[1] + l, current[2] + t],
+          [controlX + l, controlY + t],
+          [current[5] + l, current[6] + t]
         );
+
+        x = current[5];
+        y = current[6];
+
+        for (idx = 1; idx < tempPoints.length; idx++) {
+          points.push(tempPoints[idx - 1][0], tempPoints[idx - 1][1]);
+          points.push(tempPoints[idx][0], tempPoints[idx][1]);
+        }
+
         break;
 
       case 's': // shorthand cubic bezierCurveTo, relative
@@ -109,15 +131,18 @@ module.exports = function(g, path, l, t) {
         // calculate reflection of previous control points
         controlX = 2 * x - controlX;
         controlY = 2 * y - controlY;
-        g.bezierCurveTo(
-          controlX + l,
-          controlY + t,
-          x + current[1] + l,
-          y + current[2] + t,
-          tempX + l,
-          tempY + t
+
+        tempPoints = bezier(
+          [x + l, y + t],
+          [controlX + l, controlY + t],
+          [x + current[1] + l, y + current[2] + t],
+          [tempX + l, tempY + t]
         );
 
+        for (idx = 1; idx < tempPoints.length; idx++) {
+          points.push(tempPoints[idx - 1][0], tempPoints[idx - 1][1]);
+          points.push(tempPoints[idx][0], tempPoints[idx][1]);
+        }
         // set control point to 2nd one of this command
         // the first control point is assumed to be the reflection of
         // the second control point on the previous command relative
@@ -135,14 +160,19 @@ module.exports = function(g, path, l, t) {
         // calculate reflection of previous control points
         controlX = 2*x - controlX;
         controlY = 2*y - controlY;
-        g.bezierCurveTo(
-          controlX + l,
-          controlY + t,
-          current[1] + l,
-          current[2] + t,
-          tempX + l,
-          tempY + t
+
+        tempPoints = bezier(
+          [x + l, y + t],
+          [controlX + l, controlY + t],
+          [current[1] + l, current[2] + t],
+          [tempX + l, tempY + t]
         );
+
+        for (idx = 1; idx < tempPoints.length; idx++) {
+          points.push(tempPoints[idx - 1][0], tempPoints[idx - 1][1]);
+          points.push(tempPoints[idx][0], tempPoints[idx][1]);
+        }
+
         x = tempX;
         y = tempY;
         // set control point to 2nd one of this command
@@ -162,12 +192,17 @@ module.exports = function(g, path, l, t) {
         controlX = x + current[1];
         controlY = y + current[2];
 
-        g.quadraticCurveTo(
-          controlX + l,
-          controlY + t,
-          tempX + l,
-          tempY + t
+        tempPoints = quadratic(
+          [x + l, y + t],
+          [controlX + l, controlY + t],
+          [tempX + l, tempY + t]
         );
+
+        for (idx = 1; idx < tempPoints.length; idx++) {
+          points.push(tempPoints[idx - 1][0], tempPoints[idx - 1][1]);
+          points.push(tempPoints[idx][0], tempPoints[idx][1]);
+        }
+
         x = tempX;
         y = tempY;
         break;
@@ -176,12 +211,16 @@ module.exports = function(g, path, l, t) {
         tempX = current[3];
         tempY = current[4];
 
-        g.quadraticCurveTo(
-          current[1] + l,
-          current[2] + t,
-          tempX + l,
-          tempY + t
+        tempPoints = quadratic(
+          [x + l, y + t],
+          [current[1] + l, current[2] + t],
+          [tempX + l, tempY + t]
         );
+
+        for (idx = 1; idx < tempPoints.length; idx++) {
+          points.push(tempPoints[idx - 1][0], tempPoints[idx - 1][1]);
+          points.push(tempPoints[idx][0], tempPoints[idx][1]);
+        }
         x = tempX;
         y = tempY;
         controlX = current[1];
@@ -214,12 +253,17 @@ module.exports = function(g, path, l, t) {
         tempControlX = controlX;
         tempControlY = controlY;
 
-        g.quadraticCurveTo(
-          controlX + l,
-          controlY + t,
-          tempX + l,
-          tempY + t
+        tempPoints = quadratic(
+          [x + l, y + t],
+          [controlX + l, controlY + t],
+          [tempX + l, tempY + t]
         );
+
+        for (idx = 1; idx < tempPoints.length; idx++) {
+          points.push(tempPoints[idx - 1][0], tempPoints[idx - 1][1]);
+          points.push(tempPoints[idx][0], tempPoints[idx][1]);
+        }
+
         x = tempX;
         y = tempY;
         controlX = x + current[1];
@@ -233,12 +277,18 @@ module.exports = function(g, path, l, t) {
         // calculate reflection of previous control points
         controlX = 2 * x - controlX;
         controlY = 2 * y - controlY;
-        g.quadraticCurveTo(
-          controlX + l,
-          controlY + t,
-          tempX + l,
-          tempY + t
+
+        tempPoints = quadratic(
+          [x + l, y + t],
+          [controlX + l, controlY + t],
+          [tempX + l, tempY + t]
         );
+
+        for (idx = 1; idx < tempPoints.length; idx++) {
+          points.push(tempPoints[idx - 1][0], tempPoints[idx - 1][1]);
+          points.push(tempPoints[idx][0], tempPoints[idx][1]);
+        }
+
         x = tempX;
         y = tempY;
         break;
@@ -273,11 +323,14 @@ module.exports = function(g, path, l, t) {
 
       case 'z':
       case 'Z':
-        g.closePath();
+        points.push(x + l, y + t);
+        points.push(points[0], points[1]);
         break;
     }
     previous = current;
   }
+
+  return points;
 };
 
 function drawArc(g, x, y, coords) {
@@ -293,6 +346,6 @@ function drawArc(g, x, y, coords) {
   );
   for (var i=0; i<seg.length; ++i) {
     var bez = arc.bezier(seg[i]);
-    g.bezierCurveTo.apply(g, bez);
+    // g.bezierCurveTo.apply(g, bez);
   }
 }

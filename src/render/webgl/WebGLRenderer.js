@@ -82,6 +82,11 @@ prototype.gl = function() {
   var canvas = this.canvas();
   var gl = WebGL.init(canvas);
 
+  // TODO - Research the implications of this.
+  //        Its currently only used for image transparency...
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.enable(gl.BLEND);
+
   // // Enable depth testing
   gl.enable(gl.DEPTH_TEST);
   // // Near things obscure far things
@@ -153,6 +158,7 @@ prototype.render = function(scene, items) {
 
 prototype.draw = function(ctx, scene, bounds) {
   var mark = marks[scene.marktype];
+  console.log(mark);
   if(mark) {
     mark.draw.call(this, ctx, scene, bounds);
   } else {
@@ -165,9 +171,11 @@ prototype.clear = function(x, y, w, h) {
   // TODO - does this need to be used to
   // clear certain regions of the screen too?
   var gl = this.gl();
-  var c = Color(this._bgcolor);
 
-  gl.clearColor(c.red() / 255, c.green() / 255, c.blue() / 255, c.alpha());
+  if(this._bgcolor) {
+    var c = Color(this._bgcolor);
+    gl.clearColor(c.red() / 255, c.green() / 255, c.blue() / 255, c.alpha());
+  }
   gl.clear(gl.COLOR_BUFFER_BIT);
 };
 

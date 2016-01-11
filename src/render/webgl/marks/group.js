@@ -5,8 +5,6 @@ var util = require('./util'),
 function draw(g, scene, bounds) {
   if (!scene.items || !scene.items.length) return;
 
-
-
   var groups = scene.items,
       renderer = this,
       group, items, axes, legends, gx, gy, w, h, opac, i, n, j, m;
@@ -68,7 +66,69 @@ function draw(g, scene, bounds) {
 }
 
 function pick(g, scene, x, y, gx, gy) {
-  throw new Error('Not implemented');
+  if (scene.bounds && !scene.bounds.contains(gx, gy)) {
+    return null;
+  }
+
+  var groups = scene.items || EMPTY, subscene,
+      group, axes, items, legends, hits, dx, dy, i, j, b;
+
+  for (i=groups.length; --i>=0;) {
+    group = groups[i];
+
+    // first hit test against bounding box
+    // if a group is clipped, that should be handled by the bounds check.
+    b = group.bounds;
+    if (b && !b.contains(gx, gy)) continue;
+
+    // passed bounds check, so test sub-groups
+    axes = group.axisItems || EMPTY;
+    items = group.items || EMPTY;
+    legends = group.legendItems || EMPTY;
+    dx = (group.x || 0);
+    dy = (group.y || 0);
+
+    // g.save();
+    // g.translate(dx, dy);
+    dx = gx - dx;
+    dy = gy - dy;
+    for (j=legends.length; --j>=0;) {
+      subscene = legends[j];
+      if (subscene.interactive !== false) {
+        hits = this.pick(subscene, x, y, dx, dy);
+        if (hits) {  return hits; }
+      }
+    }
+    for (j=axes.length; --j>=0;) {
+      subscene = axes[j];
+      if (subscene.interactive !== false && subscene.layer !== 'back') {
+        hits = this.pick(subscene, x, y, dx, dy);
+        if (hits) {  return hits; }
+      }
+    }
+    for (j=items.length; --j>=0;) {
+      subscene = items[j];
+      if (subscene.interactive !== false) {
+        hits = this.pick(subscene, x, y, dx, dy);
+        if (hits) {  return hits; }
+      }
+    }
+    for (j=axes.length; --j>=0;) {
+      subscene = axes[j];
+      if (subscene.interative !== false && subscene.layer === 'back') {
+        hits = this.pick(subscene, x, y, dx, dy);
+        if (hits) {  return hits; }
+      }
+    }
+    // g.restore();
+
+    if (scene.interactive !== false && (group.fill || group.stroke) &&
+        dx >= 0 && dx <= group.width && dy >= 0 && dy <= group.height) {
+      return group;
+    }
+  }
+
+  return null;
 }
 
 module.exports = {

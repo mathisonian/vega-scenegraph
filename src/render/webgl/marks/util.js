@@ -1,11 +1,45 @@
-function drawPathOne(path, g, o, items) {
-  if (path(g, items)) return;
+
+var glslify = require('glslify')
+var createShader = require('gl-shader');
+var createBuffer = require('gl-buffer');
+var vertexShader = glslify('../shaders/vertex/position.glsl');
+var fragmentShader = glslify('../shaders/fragment/color.glsl');
+
+
+
+function drawPathOne(path, gl, o, items) {
+  var lw = (lw = o.strokeWidth) != null ? lw : 1, lc;
+  gl.lineWidth(lw);
+
+  var canvas = this.canvas();
+  var shader = createShader(gl, vertexShader, fragmentShader);
+  shader.bind();
+  shader.uniforms.resolution = [canvas.clientWidth, canvas.clientHeight];
+  shader.uniforms.matrix = this.transformationMatrix();
+
+  var buffer = createBuffer(gl, []);
+  buffer.bind();
+  shader.attributes.coord.pointer();
+
+  var points = path(gl, items);
+
+  console.log(points);
+
+  buffer.update(points);
+
+  shader.uniforms.color = [0.0, 0.0, 0.0, 1.0];
+
+
+  gl.drawArrays(gl.LINES, 0, points.length / 2);
+
 
   var opac = o.opacity == null ? 1 : o.opacity;
   if (opac===0) return;
 
-  if (o.fill && fill(g, o, opac)) { g.fill(); }
-  if (o.stroke && stroke(g, o, opac)) { g.stroke(); }
+
+
+  // if (o.fill && fill(g, o, opac)) { g.fill(); }
+  // if (o.stroke && stroke(g, o, opac)) { g.stroke(); }
 }
 
 function drawPathAll(path, g, scene, bounds) {
@@ -13,14 +47,14 @@ function drawPathAll(path, g, scene, bounds) {
   for (i=0, len=scene.items.length; i<len; ++i) {
     item = scene.items[i];
     if (!bounds || bounds.intersects(item.bounds)) {
-      drawPathOne(path, g, item, item);
+      drawPathOne.call(this, path, g, item, item);
     }
   }
 }
 
 function drawAll(pathFunc) {
   return function(g, scene, bounds) {
-    drawPathAll(pathFunc, g, scene, bounds);
+    drawPathAll.call(this, pathFunc, g, scene, bounds);
   };
 }
 
@@ -28,7 +62,7 @@ function drawOne(pathFunc) {
   return function(g, scene, bounds) {
     if (!scene.items.length) return;
     if (!bounds || bounds.intersects(scene.bounds)) {
-      drawPathOne(pathFunc, g, scene.items[0], scene.items);
+      drawPathOne.call(this, pathFunc, g, scene.items[0], scene.items);
     }
   };
 }
@@ -103,8 +137,8 @@ function stroke(g, o, opacity) {
     g.strokeStyle = color(g, o, o.stroke);
     g.lineWidth = lw;
     g.lineCap = (lc = o.strokeCap) != null ? lc : 'butt';
-    g.vgLineDash(o.strokeDash || null);
-    g.vgLineDashOffset(o.strokeDashOffset || 0);
+    // g.vgLineDash(o.strokeDash || null);
+    // g.vgLineDashOffset(o.strokeDashOffset || 0);
     return true;
   } else {
     return false;
@@ -134,6 +168,23 @@ function gradient(g, p, b) {
   return grad;
 }
 
+
+function getBufferRectangle(x, y, width, height) {
+  var x1 = x;
+  var x2 = x + width;
+  var y1 = y;
+  var y2 = y + height;
+  return [
+   x1, y1,
+   x2, y1,
+   x1, y2,
+   x1, y2,
+   x2, y1,
+   x2, y2
+  ];
+};
+
+
 module.exports = {
   drawOne:  drawOne,
   drawAll:  drawAll,
@@ -143,5 +194,6 @@ module.exports = {
   stroke:   stroke,
   fill:     fill,
   color:    color,
-  gradient: gradient
+  gradient: gradient,
+  getBufferRectangle: getBufferRectangle
 };
